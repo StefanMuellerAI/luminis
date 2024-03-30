@@ -16,8 +16,8 @@ import chromadb.utils.embedding_functions as embedding_functions
 import pandas as pd
 
 st.set_page_config(
-    page_title="Luminis - KI-Labor",
-    page_icon="🧊",
+    page_title="Luminis - KI-Labor und Lernplattform",
+    page_icon="🥼🥽",
     layout="wide",
     initial_sidebar_state="expanded")
 
