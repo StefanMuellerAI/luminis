@@ -82,7 +82,7 @@ def tokenize_and_chunk_text(text, max_tokens_per_chunk):
     return text_chunks
 
 
-def add_document_to_collection(text, doc_id, hash_value, max_tokens_per_chunk):
+def add_document_to_collection(text, doc_id, hash_value, max_tokens_per_chunk, collection_description):
     """
     Erweiterte Funktion zum Hinzufügen eines Dokuments in Chunks zur Collection.
     """
@@ -95,9 +95,8 @@ def add_document_to_collection(text, doc_id, hash_value, max_tokens_per_chunk):
         chunk_id = f"{doc_id}_{i}"  # Erzeuge eine eindeutige ID für jeden Chunk basierend auf der doc_id und der Reihenfolge.
         collection.upsert(
             embeddings=[embedding],
-            # Es wird angenommen, dass das gleiche Embedding für alle Chunks verwendet wird. Das kann je nach Anwendungsfall variieren.
             documents=[chunk],
-            metadatas=[{"source": "user_uploaded_pdf", "hash": hash_value}],
+            metadatas=[{"source": "user_uploaded_pdf", "hash": hash_value, "describtion": collection_description, "chunk_id": chunk_id}],
             ids=[chunk_id]
         )
 
@@ -159,15 +158,11 @@ with st.sidebar:
         "Text2Image",
         "Text2Speech",
         "Speech2Text",
-        "Image2Text",
-        "Text2Analysis",
-        "Schulung",
         "Dokumenten-Sammlungen",
         "Experten",
-        "Tools",
     ]
 
-    page = st.sidebar.selectbox("Navigation:", sidebar_options1)
+    page = st.sidebar.selectbox("Navigation zu den Modulen:", sidebar_options1)
     st.divider()
     st.warning("Bitte beachten Sie, dass dies eine Schulungs- und Testumgebung ist, die Verwendung von personenbezogenen Informationen sowie internen Dokumenten ist strengstens untersagt. Arbeitsergebnisse werden nicht gespeichert und sind nicht zur produktiven Nutzung freigegeben. Dieses KI-Labor ist direkt an die amerikanischen Server von openai und stability.ai angeschlossen. Daten werden übermittelt.")
     st.divider()
@@ -176,7 +171,8 @@ with st.sidebar:
 if page == "Dokumenten-Sammlungen":
     st.title("Dokumenten-Sammlungen erstellen oder löschen.")
     collection_name = st.text_input("Dokumenten-Sammlung benennen:")
-    chunk_size = st.slider('Chunk-Size festlegen:', 256, 2048, 512)
+    collection_describtion = st.text_area("Dokumenten-Sammlung beschreiben:")
+    chunk_size = st.slider('Chunk-Size festlegen:', 256, 2048, 512, help='In wie kleine Stücke soll der Inhalt zur Vektorisierung zerlegt werden? Wenn die Zahl zu klein ist, geht Sinn verloren. Wenn sie zu groß ist, könnte das Context-Fenster des LLM überschritten werden.')
     # PDF-Upload für mehrere Dateien
     uploaded_files = st.file_uploader("PDF-Dateien hochladen:", type=["pdf"], accept_multiple_files=True)
 
@@ -190,7 +186,7 @@ if page == "Dokumenten-Sammlungen":
                 text = extract_text_from_pdf(uploaded_file)
                 if text:
                     hash_value = hash_file_content(text)
-                    add_document_to_collection(text, doc_id, hash_value, chunk_size)
+                    add_document_to_collection(text, doc_id, hash_value, chunk_size, collection_describtion)
                     st.success(f"Dokument {doc_id} erfolgreich zur Sammlung hinzugefügt oder ergänzt.")
                 else:
                     st.error(f"Die PDF-Datei {doc_id} scheint keinen Text zu enthalten.")
@@ -331,17 +327,20 @@ elif page == "Text2Image":
             with col2:
                 with st.spinner('Bild wird generiert...'):
                 # Aufruf der DALL-E-Funktion
-                    image_url = t2i.create_dalle_image(dalle_description, dalle_size)
-                    with st.container(border=True):
-                        if 'image_url' in locals():
-                            st.image(image_url, caption=f'Symbolbild: {dalle_description}', use_column_width=True)
+                    try:
+                        image_url = t2i.create_dalle_image(dalle_description, dalle_size)
+                        with st.container(border=True):
+                            if 'image_url' in locals():
+                                st.image(image_url, caption=f'Symbolbild: {dalle_description}', use_column_width=True)
+                    except Exception as e:
+                        st.error(f'Sorry, die Content-Filterung von Openai.com hat die Bildbeschreibung abgelehnt. Vermutlich weil sie anstößig ist.')
 
     # Streamlit UI
     st.subheader('Möglichkeit 2: Stability AI')
     col1, col2 = st.columns([1, 1])
     # Benutzereingaben
     with col1:
-        stability_description = st.text_area("Bildbeschreibung Stability.AI:", "Ein sonniger Tag am Strand")
+        stability_description = st.text_area("Bildbeschreibung Stability AI:", "Ein sonniger Tag am Strand")
         stability_anti_description = st.text_input("Was nicht im Bild sein soll:", "None")
         stability_steps = st.slider("Arbeitsschritte:", 1, 40, 20)
         stability_style_preset = st.selectbox("Bildart wählen:", ["analog-film", "anime", "cinematic", "comic-book", "digital-art", "enhance", "fantasy-art", "isometric", "line-art", "low-poly", "modeling-compound", "neon-punk", "origami", "photographic", "pixel-art", "tile-texture"])
@@ -353,12 +352,15 @@ elif page == "Text2Image":
                 with st.spinner('Bild wird generiert...'):
                     # Hier nehme ich an, dass `create_stability_image` eine Funktion deiner Klasse oder deines Moduls `t2i` ist.
                     result = t2i.create_stability_image(stability_description, stability_anti_description, stability_steps, stability_style_preset, stability_size, stability_cfg_scale)
-                    images = result.get("images", [])
-                    if images:
-                        for img_path in images:
-                            img = Image.open(img_path)  # Das Bild wird hier direkt gelesen.
-                            st.image(img, caption=f"Symbolbild: {stability_description}", use_column_width=True)  # Und dann an `st.image` übergeben.
-                            t2i.clear_images_directory()
+                    try:
+                        images = result.get("images", [])
+                        if images:
+                            for img_path in images:
+                                img = Image.open(img_path)  # Das Bild wird hier direkt gelesen.
+                                st.image(img, caption=f"Symbolbild: {stability_description}", use_column_width=True)  # Und dann an `st.image` übergeben.
+                                t2i.clear_images_directory()
+                    except Exception as e:
+                        st.error("Sorry, die Content-Filterung von Stability AI hat die Bildbeschreibung abgelehnt. Vermutlich weil sie anstößig ist.")
 
 elif page == "Text2Speech":
     # Streamlit UI

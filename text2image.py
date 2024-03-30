@@ -1,9 +1,10 @@
 from openai import OpenAI
-from dotenv import load_dotenv
-import requests
 import os
-import base64
 import random
+import requests
+import base64
+from dotenv import load_dotenv
+import streamlit as st
 
 load_dotenv()
 
@@ -21,17 +22,12 @@ def create_dalle_image(description, size):
             n=1
         )
         image_url = response.data[0].url
+        return image_url
     except Exception as e:
-        print(e)
-        image_url = None
-    return image_url
+        return None
 
 
-import os
-import random
-import requests
-import base64
-from dotenv import load_dotenv
+
 
 # Lade Variablen aus der .env-Datei
 load_dotenv()
