@@ -14,6 +14,7 @@ import re
 import hashlib
 import chromadb.utils.embedding_functions as embedding_functions
 import pandas as pd
+import anthropic
 
 st.set_page_config(
     page_title="Luminis - KI-Labor und Lernplattform",
@@ -24,13 +25,16 @@ st.set_page_config(
 # Lädt Umgebungsvariablen aus einer .env-Datei
 load_dotenv()
 
-WRITE_AND_DELETE_EXPERTS = os.getenv("WRITE_AND_DELETE_EXPERTS")
-
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+AI_MODEL = os.getenv("AI_MODEL")
 
-
-# Initialisiert OpenAI und ChromaDB Clients
 openai_client = OpenAI()
+anthropic_client = anthropic.Anthropic(
+    # defaults to os.environ.get("ANTHROPIC_API_KEY")
+    api_key=ANTHROPIC_API_KEY,
+)
+
 chroma_client = chromadb.EphemeralClient()
 
 
@@ -205,16 +209,16 @@ if page == "Dokumenten-Sammlungen":
 elif page == "Text2Text":
     st.title("Text2Text")
     st.subheader("Interagieren Sie mit der KI und erhalten Sie Antworten auf Ihre Fragen.")
+
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+
     with col1:
         st.session_state.response_tokens = st.slider('Maximale Ausgabe:', 0, 4000, 1000)
     with col2:
-        st.session_state.temperature = st.slider('Kreativität:', 0, 100, 70,
-                                                 help="Gemessen in Tokens, ca. 1,7 Token pro Wort")
-        st.session_state.temperature /= 100  # Skaliere den Wert auf 0-1
+        st.session_state.temperature = st.slider('Kreativität:', 0, 100, 70, help="Gemessen in Tokens, ca. 1,7 Token pro Wort")
+        st.session_state.temperature /= 100
     with col3:
         st.session_state.primer = "None"
-        # Rollennamen aus der Datenbank abrufen
         st.session_state.role_names = db.get_role_names()
         st.session_state.selected_role_name = st.selectbox(
             "Wählen Sie den Experten:",
@@ -222,31 +226,30 @@ elif page == "Text2Text":
             placeholder="Wähle Rollenbeschreibung",
             index=0
         )
-        # Beschreibung der ausgewählten Rolle als Primer verwenden
         if st.session_state.selected_role_name:
             st.session_state.primer = db.get_description_by_name(st.session_state.selected_role_name)
+            st.session_state.aimodel = db.get_aimodel_by_name(st.session_state.selected_role_name)
+            st.session_state["ai_model"] = st.session_state.aimodel
     with col4:
         st.session_state.collection_to_talk = st.selectbox(
             "Wählen Sie eine Dokumenten-Sammlung:",
             options=["Keine"]+list_collections(),
             index=0)
+
     st.divider()
 
-
-    if "openai_model" not in st.session_state:
-        st.session_state["openai_model"] = "gpt-4-0125-preview"
+    if "ai_model" not in st.session_state:
+        st.session_state["ai_model"] = "gpt-4-0125-preview"
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
     for message in st.session_state.messages:
-        # Prüfen, ob die Rolle des Nachrichtenelements nicht "system" ist
         if message["role"] != "system":
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
     if prompt := st.chat_input("Stellen Sie eine Frage oder geben Sie eine Anweisung..."):
-        st.session_state.messages.append({"role": "system", "content": st.session_state.primer})
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -254,17 +257,35 @@ elif page == "Text2Text":
         with st.chat_message("assistant"):
             results = query_collection(prompt, st.session_state.collection_to_talk)
             context = "\n".join(results["documents"][0])
-            stream = openai_client.chat.completions.create(
-                model=st.session_state["openai_model"],
-                messages=[
-                    {"role": m["role"], "content": m["content"] + context}
-                    for m in st.session_state.messages
-                ],
-                stream=True,
-                temperature=st.session_state.temperature,
-                max_tokens=st.session_state.response_tokens,
-            )
-            response = st.write_stream(stream)
+            if st.session_state["ai_model"] == "gpt-4-0125-preview":
+                st.session_state.messages.append({"role": "system", "content": st.session_state.primer})
+                stream = openai_client.chat.completions.create(
+                    model="gpt-4-0125-preview",
+                    messages=[
+                        {"role": m["role"], "content": m["content"] + context}
+                        for m in st.session_state.messages
+                    ],
+                    stream=True,
+                    temperature=st.session_state.temperature,
+                    max_tokens=st.session_state.response_tokens,
+                )
+                response = st.write_stream(stream)
+            elif st.session_state["ai_model"] == "claude-3-opus-20240229":
+                with anthropic_client.messages.stream(
+                    model="claude-3-opus-20240229",
+                    system=st.session_state.primer,
+                    messages=[
+                        {"role": m["role"], "content": m["content"] + context}
+                        for m in st.session_state.messages if m["role"] != "system"
+                    ],
+                    temperature=st.session_state.temperature,
+                    max_tokens=st.session_state.response_tokens,
+                ) as stream:
+                    response_container = st.empty()
+                    response = ""
+                    for text in stream.text_stream:
+                        response += text
+                        response_container.write(response)
         st.session_state.messages.append({"role": "assistant", "content": response})
 
 elif page == "Experten":
@@ -276,15 +297,16 @@ elif page == "Experten":
     with st.form("role_form", clear_on_submit=True):
         name = st.text_input('Expertenname', '')
         description = st.text_area('Beschreibung', '')
+        ai_model = st.selectbox('KI-Modell', ['gpt-4-0125-preview', 'claude-3-opus-20240229'])
         submitted = st.form_submit_button('Experten speichern')
         if submitted:
-            db.insert_role(name, description)
+            db.insert_role(name, description, ai_model)
 
     # Rollenliste
     st.subheader('Vorhandene Experten')
     roles = db.get_all_roles()
-    roles_df = pd.DataFrame(roles, columns=['id', 'Name', 'Beschreibung'])
-    st.dataframe(roles_df[['id', 'Name', 'Beschreibung']], hide_index=True)
+    roles_df = pd.DataFrame(roles, columns=['id', 'Name', 'Beschreibung', 'KI-Modell'])
+    st.dataframe(roles_df[['id', 'Name', 'Beschreibung', 'KI-Modell']], hide_index=True)
 
     # Rolle bearbeiten oder löschen
     st.subheader('Rolle löschen')

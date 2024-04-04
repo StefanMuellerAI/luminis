@@ -15,7 +15,8 @@ def setup_database(db_name):
     CREATE TABLE IF NOT EXISTS roles (
         id INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
-        description TEXT NOT NULL
+        description TEXT NOT NULL,
+        ai_model TEXT NOT NULL
     )
     ''')
 
@@ -30,7 +31,8 @@ def connect_db(db_name):
         CREATE TABLE IF NOT EXISTS roles (
             id INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
-            description TEXT NOT NULL
+            description TEXT NOT NULL,
+            ai_model TEXT NOT NULL
         )
         ''')
     return c, conn
@@ -52,9 +54,17 @@ def get_description_by_name(name):
     return result[0] if result else "Beschreibung nicht gefunden."
     conn.close()
 
-def insert_role(name, description):
+def get_aimodel_by_name(name):
     c, conn = connect_db(db_name)
-    c.execute('INSERT INTO roles (name, description) VALUES (?, ?)', (name, description))
+    c.execute('SELECT ai_model FROM roles WHERE name = ?', (name,))
+    result = c.fetchone()
+    return result[0] if result else "Beschreibung nicht gefunden."
+    conn.close()
+
+
+def insert_role(name, description, ai_model):
+    c, conn = connect_db(db_name)
+    c.execute('INSERT INTO roles (name, description, ai_model) VALUES (?, ?, ?)', (name, description, ai_model))
     conn.commit()
     conn.close()
 
@@ -72,6 +82,6 @@ def delete_role(id):
 
 def get_all_roles():
     c, conn = connect_db(db_name)
-    c.execute('SELECT id, name, description FROM roles')
+    c.execute('SELECT id, name, description, ai_model FROM roles')
     return c.fetchall()
     conn.close()
