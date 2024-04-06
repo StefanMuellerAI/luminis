@@ -8,6 +8,7 @@ import streamlit as st
 import text2image as t2i
 import speech2text as s2t
 import text2speech as t2s
+import text2video as t2v
 import fitz
 import chromadb
 import re
@@ -16,7 +17,6 @@ import chromadb.utils.embedding_functions as embedding_functions
 import pandas as pd
 import anthropic
 from mistralai.client import MistralClient
-from mistralai.models.chat_completion import ChatMessage
 
 st.set_page_config(
     page_title="Luminis - KI-Labor und Lernplattform",
@@ -161,8 +161,9 @@ with st.sidebar:
         "Text2Image",
         "Text2Speech",
         "Speech2Text",
-        "Dokumenten-Sammlungen",
-        "Experten",
+        "Text2Video",
+        "Dokumente",
+        "Rollen",
     ]
 
     page = st.sidebar.selectbox("Navigation zu den Modulen:", sidebar_options1)
@@ -171,7 +172,7 @@ with st.sidebar:
     st.divider()
     st.info("Kontaktdaten: support@stefanai.de bei Fehlern, Fragen und Anregungen. Reaktionszeit: Nächster Werktag. Mo-Fr. 8-18 Uhr")
 
-if page == "Dokumenten-Sammlungen":
+if page == "Dokumente":
     st.title("Dokumenten-Sammlungen erstellen oder löschen.")
     collection_name = st.text_input("Dokumenten-Sammlung benennen:")
     collection_describtion = st.text_area("Dokumenten-Sammlung beschreiben:")
@@ -303,32 +304,40 @@ elif page == "Text2Text":
                     response_container.write(response)
         st.session_state.messages.append({"role": "assistant", "content": response})
 
-elif page == "Experten":
+elif page == "Rollen":
     # Streamlit UI
 
-    st.title('Experten Verwaltung')
+    st.title('Rollen Verwaltung')
     st.subheader('Gib der KI verschiedene Rollen, um mit ihr besser zu interagieren.')
     # Eingabefelder
     with st.form("role_form", clear_on_submit=True):
         ai_model = st.selectbox('KI-Modell:', ['gpt-4-0125-preview', 'claude-3-opus-20240229', 'mistral-large-latest'],
                                 help='Welches KI-Modell soll für diese Rolle verwendet werden?')
-        name = st.text_input('Expertenname:', '', help='Wie soll der Experte heißen?')
+        name = st.text_input('Rollenname:', '', help='Wie soll die Rolle heißen?')
 
-        description = st.text_area('Beschreibung des Experten:', '', max_chars=1000, help='Beschreibe die Rolle des Experten. Wenn der Chatbot mit Claude-3 läuft, kann diese Beschreibung länger ausfallen.')
-        submitted = st.form_submit_button('Experten speichern')
+        description = st.text_area('Beschreibung der Rolle:', '', max_chars=1000, help='Beschreibe die Rolle. Wenn der Chatbot mit Claude-3 läuft, kann diese Beschreibung länger ausfallen.')
+        submitted = st.form_submit_button('Rolle speichern')
         if submitted:
-            if db.role_name_exists(name):
-                st.error('Es gibt bereits eine Rolle mit diesem Namen.')
-            else:
-                if len(description) < 50:
-                    st.error('Die Beschreibung muss minimal 50 Zeichen lang sein.')
+            if len(description) > 50 and not db.role_name_exists(name):
                 db.insert_role(name, description, ai_model)
+            else:
+                st.error('Beschreibung zu kurz (min. 50 Zeichen) oder Rollenname existiert bereits.')
+
 
     # Rollenliste
-    st.subheader('Vorhandene Experten')
-    roles = db.get_all_roles()
+    st.subheader('Vorhandene Rollen')
+    roles = db.list_roles()
     roles_df = pd.DataFrame(roles, columns=['id', 'Name', 'Beschreibung', 'KI-Modell'])
     st.dataframe(roles_df[['id', 'Name', 'Beschreibung', 'KI-Modell']], hide_index=True)
+
+    # Abschnitt für das Löschen von Collections
+    st.subheader("Rollen löschen")
+    delete_role_name = st.selectbox("Wählen Sie ein Rolle aus:", roles_df['Name'].tolist())
+    if st.button("Bestehende Sammlung löschen!"):
+        if delete_role_name:
+            db.delete_role(name=delete_role_name)
+            st.success(f"Sammlung '{delete_role_name}' wurde erfolgreich gelöscht.")
+            st.rerun()
 
     # Rolle bearbeiten oder löschen
 
@@ -418,6 +427,22 @@ elif page == "Text2Speech":
                 t2s.clear_speech_directory()
             else:
                 st.error("Ein Fehler ist aufgetreten. Die Sprachdatei konnte nicht erstellt werden.")
+
+elif page == "Text2Video":
+    st.header('Text2Video')
+    st.subheader('Generieren Sie Videos aus Textbeschreibungen inkl. Voiceover.')
+    description = st.text_area('Beschreibung des Videos', placeholder='Das alles kann die KI-Lernplattform Luminis!')
+    if st.button('Video erstellen'):
+        video_id = t2v.create_video(description)
+        if video_id:
+            with st.spinner('Video wird erstellt... Bitte warten.'):
+                status, video_url = t2v.check_video_status(video_id)
+                if status == 'completed':
+                    st.video(video_url)
+                elif status == 'failed':
+                    st.error('Videoerstellung fehlgeschlagen.')
+        else:
+            st.error('Es ist ein Fehler aufgetreten!')
 
 
 

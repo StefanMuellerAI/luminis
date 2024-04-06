@@ -81,14 +81,15 @@ def update_role(id, name, description):
     conn.commit()
     conn.close()
 
-def delete_role(id):
+def delete_role(name):
     c, conn = connect_db(db_name)
-    c.execute('DELETE FROM roles WHERE id = ?', (id,))
+    c.execute('DELETE FROM roles WHERE name = ?', (name,))
     conn.commit()
     conn.close()
 
-def get_all_roles():
+def list_roles():
     c, conn = connect_db(db_name)
     c.execute('SELECT id, name, description, ai_model FROM roles')
     return c.fetchall()
     conn.close()
+
