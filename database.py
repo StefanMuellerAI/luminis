@@ -47,6 +47,13 @@ def get_role_names():
     return [row[0] for row in c.fetchall()]  # Nur Rollennamen zurückgeben
     conn.close()
 
+def role_name_exists(name):
+    c, conn = connect_db(db_name)
+    # Boolean zurückgeben, ob der Rollenname bereits existiert
+    c.execute('SELECT EXISTS(SELECT 1 FROM roles WHERE name = ?)', (name,))
+    return c.fetchone()[0] == 1
+    conn.close()
+
 def get_description_by_name(name):
     c, conn = connect_db(db_name)
     c.execute('SELECT description FROM roles WHERE name = ?', (name,))

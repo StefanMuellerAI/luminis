@@ -15,6 +15,8 @@ import hashlib
 import chromadb.utils.embedding_functions as embedding_functions
 import pandas as pd
 import anthropic
+from mistralai.client import MistralClient
+from mistralai.models.chat_completion import ChatMessage
 
 st.set_page_config(
     page_title="Luminis - KI-Labor und Lernplattform",
@@ -27,14 +29,11 @@ load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-AI_MODEL = os.getenv("AI_MODEL")
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 
 openai_client = OpenAI()
-anthropic_client = anthropic.Anthropic(
-    # defaults to os.environ.get("ANTHROPIC_API_KEY")
-    api_key=ANTHROPIC_API_KEY,
-)
-
+anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+mistral_client = MistralClient(api_key=MISTRAL_API_KEY)
 chroma_client = chromadb.EphemeralClient()
 
 
@@ -286,6 +285,22 @@ elif page == "Text2Text":
                     for text in stream.text_stream:
                         response += text
                         response_container.write(response)
+            elif st.session_state["ai_model"] == "mistral-large-latest":
+                st.session_state.messages.append({"role": "system", "content": st.session_state.primer})
+                stream_response = mistral_client.chat_stream(
+                    model="mistral-large-latest",
+                    messages=[
+                        {"role": m["role"], "content": m["content"] + context}
+                        for m in st.session_state.messages
+                    ],
+                    temperature=st.session_state.temperature,
+                    max_tokens=st.session_state.response_tokens,
+                )
+                response_container = st.empty()
+                response = ""
+                for text in stream_response:
+                    response += text.choices[0].delta.content
+                    response_container.write(response)
         st.session_state.messages.append({"role": "assistant", "content": response})
 
 elif page == "Experten":
@@ -295,12 +310,19 @@ elif page == "Experten":
     st.subheader('Gib der KI verschiedene Rollen, um mit ihr besser zu interagieren.')
     # Eingabefelder
     with st.form("role_form", clear_on_submit=True):
-        name = st.text_input('Expertenname', '')
-        description = st.text_area('Beschreibung', '')
-        ai_model = st.selectbox('KI-Modell', ['gpt-4-0125-preview', 'claude-3-opus-20240229'])
+        ai_model = st.selectbox('KI-Modell:', ['gpt-4-0125-preview', 'claude-3-opus-20240229', 'mistral-large-latest'],
+                                help='Welches KI-Modell soll für diese Rolle verwendet werden?')
+        name = st.text_input('Expertenname:', '', help='Wie soll der Experte heißen?')
+
+        description = st.text_area('Beschreibung des Experten:', '', max_chars=1000, help='Beschreibe die Rolle des Experten. Wenn der Chatbot mit Claude-3 läuft, kann diese Beschreibung länger ausfallen.')
         submitted = st.form_submit_button('Experten speichern')
         if submitted:
-            db.insert_role(name, description, ai_model)
+            if db.role_name_exists(name):
+                st.error('Es gibt bereits eine Rolle mit diesem Namen.')
+            else:
+                if len(description) < 50:
+                    st.error('Die Beschreibung muss minimal 50 Zeichen lang sein.')
+                db.insert_role(name, description, ai_model)
 
     # Rollenliste
     st.subheader('Vorhandene Experten')
@@ -309,12 +331,6 @@ elif page == "Experten":
     st.dataframe(roles_df[['id', 'Name', 'Beschreibung', 'KI-Modell']], hide_index=True)
 
     # Rolle bearbeiten oder löschen
-    st.subheader('Rolle löschen')
-    role_id = st.number_input('Rollen-ID eingeben:', min_value=0, value=1, step=1)
-
-    if st.button('Rolle löschen'):
-        db.delete_role(role_id)
-        st.rerun()
 
 elif page == "Speech2Text":
     st.title('Speech2Text')
