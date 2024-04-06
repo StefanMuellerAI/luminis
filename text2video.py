@@ -23,7 +23,7 @@ def create_video(text):
           },
           "voice": {
             "type": "text",
-            "input_text": "Welcome to the HeyGen API!",
+            "input_text": text,
             "voice_id": "2d5b0e6cf36f460aa7fc47e3eee4ba54"
           },
           "background": {

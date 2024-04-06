@@ -362,8 +362,7 @@ elif page == "Speech2Text":
 
 elif page == "Text2Image":
     st.title('Text2Image')
-    st.markdown('Generieren Sie Bilder aus Textbeschreibungen.')
-    st.subheader('Möglichkeit: Dall-e 3')
+    st.subheader('Bilderstellung mit Dall-E 3')
     # Spalten für Layout
     col1, col2 = st.columns([1, 1])
     # Im ersten Spaltenblock
@@ -383,7 +382,7 @@ elif page == "Text2Image":
                         st.error(f'Sorry, die Content-Filterung von Openai.com hat die Bildbeschreibung abgelehnt. Vermutlich weil sie anstößig ist.')
 
     # Streamlit UI
-    st.subheader('Möglichkeit 2: Stability AI')
+    st.subheader('Bilderstellung mit Stability AI')
     col1, col2 = st.columns([1, 1])
     # Benutzereingaben
     with col1:
@@ -410,39 +409,57 @@ elif page == "Text2Image":
                         st.error("Sorry, die Content-Filterung von Stability AI hat die Bildbeschreibung abgelehnt. Vermutlich weil sie anstößig ist.")
 
 elif page == "Text2Speech":
-    # Streamlit UI
     st.title("Text2Speech")
     st.subheader("Konvertieren Sie Ihren Text in eine Sprachausgabe.")
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        user_input = st.text_area("Geben Sie hier Ihren Text ein:", "Hallo Welt!")
+        voice = st.selectbox("Wählen Sie eine Stimme:", ["alloy", "echo", "fable", "onyx", "nova", "shimmer"])
 
-    # Eingabefeld für den Text
-    user_input = st.text_area("Geben Sie hier Ihren Text ein:", "Hallo Welt!")
-    voice = st.selectbox("Wählen Sie eine Stimme:", ["alloy", "echo", "fable", "onyx", "nova", "shimmer"])
-
-    # Button zur Generierung der Sprachausgabe
-    if st.button("Sprachausgabe generieren!"):
-        with st.spinner('Generiere Sprachausgabe...'):
-            speech_path = t2s.create_speech_from_text(user_input, voice)
-            if speech_path.is_file():
-                st.audio(str(speech_path), format='audio/mp3')
-                t2s.clear_speech_directory()
-            else:
-                st.error("Ein Fehler ist aufgetreten. Die Sprachdatei konnte nicht erstellt werden.")
+        if st.button("Sprachausgabe generieren!"):
+            with col2:
+                with st.spinner('Generiere Sprachausgabe...'):
+                    speech_path = t2s.create_speech_from_text(user_input, voice)
+                    if speech_path.is_file():
+                        st.audio(str(speech_path), format='audio/mp3')
+                        t2s.clear_speech_directory()
+                    else:
+                        st.error("Ein Fehler ist aufgetreten. Die Sprachdatei konnte nicht erstellt werden.")
 
 elif page == "Text2Video":
-    st.header('Text2Video')
+    st.title('Text2Video')
     st.subheader('Generieren Sie Videos aus Textbeschreibungen inkl. Voiceover.')
-    description = st.text_area('Beschreibung des Videos', placeholder='Das alles kann die KI-Lernplattform Luminis!')
-    if st.button('Video erstellen'):
-        video_id = t2v.create_video(description)
-        if video_id:
-            with st.spinner('Video wird erstellt... Bitte warten.'):
-                status, video_url = t2v.check_video_status(video_id)
-                if status == 'completed':
-                    st.video(video_url)
-                elif status == 'failed':
-                    st.error('Videoerstellung fehlgeschlagen.')
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        avatar = st.selectbox('Avatar wählen:', ['Avatar1', 'Avatar2', 'Avatar3'])
+        voice = st.selectbox('Stimme wählen:', ['Voice1', 'Voice2', 'Voice3'])
+        background = st.color_picker('Hintergrundfarbe:', '#00f900')
+        description = st.text_area('Beschreibung des Videos', placeholder='Hier kommt der Text hin, der vorgetragen werden soll.')
+        if st.button('Video erstellen!'):
+            with col2:
+                with st.spinner('Video wird erstellt... Bitte warten.'):
+                    video_id = t2v.create_video(description)
+                    status, video_url = t2v.check_video_status(video_id)
+                    if status == 'completed':
+                        st.video(video_url)
+                    elif status == 'failed':
+                        st.error('Videoerstellung fehlgeschlagen.')
         else:
             st.error('Es ist ein Fehler aufgetreten!')
+        st.divider()
+        st.subheader('Video in diverse Sprachen übersetzen!')
+        target_url = st.text_input('Ziel-URL:', 'https://www.example.com')
+        target_language = st.selectbox('Sprache wählen:', ['Englisch', 'Spanisch', 'Französisch'])
+        if st.button('Video übersetzen!'):
+            video_id = t2v.create_video(description)
+            with col2:
+                if video_id:
+                    with st.spinner('Video wird übersetzt... Bitte warten.'):
+                        status, video_url = t2v.check_video_status(video_id)
+                        if status == 'completed':
+                            st.video(video_url)
+                        elif status == 'failed':
+                            st.error('Videübersetzung fehlgeschlagen.')
 
 
 
