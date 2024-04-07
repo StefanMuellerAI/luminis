@@ -3,14 +3,16 @@ import openai
 import random
 import os
 from dotenv import load_dotenv
+import streamlit as st
+from home import add_menu
 
 load_dotenv()
 
 # Setze hier deinen OpenAI API-Key
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-if not os.path.exists("./speech"):
-    os.makedirs("./speech")
+if not os.path.exists("../speech"):
+    os.makedirs("../speech")
 
 def create_speech_from_text(text, voice):
     try:
@@ -41,3 +43,21 @@ def clear_speech_directory(directory="./speech"):
                     pass
             except Exception as e:
                 print(f"Fehler beim Löschen der Datei {file_path}. Grund: {e}")
+
+
+st.title("Text2Speech")
+st.subheader("Konvertieren Sie Ihren Text in eine Sprachausgabe.")
+col1, col2 = st.columns([1, 1])
+with col1:
+    user_input = st.text_area("Geben Sie hier Ihren Text ein:", "Hallo Welt!")
+    voice = st.selectbox("Wählen Sie eine Stimme:", ["alloy", "echo", "fable", "onyx", "nova", "shimmer"])
+    if st.button("Sprachausgabe generieren!"):
+        with col2:
+            with st.spinner('Generiere Sprachausgabe...'):
+                speech_path = create_speech_from_text(user_input, voice)
+                if speech_path.is_file():
+                    st.audio(str(speech_path), format='audio/mp3')
+                    clear_speech_directory()
+                else:
+                    st.error("Ein Fehler ist aufgetreten. Die Sprachdatei konnte nicht erstellt werden.")
+add_menu()

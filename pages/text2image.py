@@ -1,15 +1,19 @@
-from openai import OpenAI
 import os
-import random
-import requests
-import base64
+from openai import OpenAI
+from PIL import Image
 from dotenv import load_dotenv
 import streamlit as st
+import random
+import base64
+import requests
+from home import add_menu
+
 
 load_dotenv()
 
 client_openai = OpenAI()
 stability_api_key = os.getenv("STABILITY_API_KEY")
+
 
 def create_dalle_image(description, size):
 
@@ -27,17 +31,9 @@ def create_dalle_image(description, size):
         return None
 
 
-
-
-# Lade Variablen aus der .env-Datei
-load_dotenv()
-
-# Der API-Schlüssel wird hier geladen
-stability_api_key = os.getenv("STABILITY_API_KEY")
-
 def create_stability_image(description, anti_description, steps, style_preset, size, cfg_scale):
-    if not os.path.exists("./images"):
-        os.makedirs("./images")
+    if not os.path.exists("../images"):
+        os.makedirs("../images")
     image_id = random.randint(100000, 999999)
 
     parts = size.split("x")
@@ -99,3 +95,49 @@ def clear_images_directory(directory="./images"):
                     pass
             except Exception as e:
                 print(f"Fehler beim Löschen der Datei {file_path}. Grund: {e}")
+
+st.title('Text2Image')
+st.subheader('Bilderstellung mit Dall-E 3')
+col1, col2 = st.columns([1, 1])
+with col1:
+    dalle_description = st.text_area('Bildbeschreibung DALL-e 3:', "Ein sonniger Tag am Strand")
+    dalle_size = st.selectbox('Bildauflösung wählen:', ['1024x1024', '1024x1792', '1792x1024'])
+    if st.button('Bild generieren!'):
+        with col2:
+            with st.spinner('Bild wird generiert...'):
+                try:
+                    image_url = create_dalle_image(dalle_description, dalle_size)
+                    with st.container(border=True):
+                        if 'image_url' in locals():
+                            st.image(image_url, caption=f'Symbolbild: {dalle_description}', use_column_width=True)
+                except Exception as e:
+                    st.error(f'Sorry, die Content-Filterung von Openai.com hat die Bildbeschreibung abgelehnt. Vermutlich weil sie anstößig ist.')
+
+    # Streamlit UI
+st.subheader('Bilderstellung mit Stability AI')
+col1, col2 = st.columns([1, 1])
+with col1:
+    stability_description = st.text_area("Bildbeschreibung Stability AI:", "Ein sonniger Tag am Strand")
+    stability_anti_description = st.text_input("Was nicht im Bild sein soll:", "None")
+    stability_steps = st.slider("Arbeitsschritte:", 1, 40, 20)
+    stability_style_preset = st.selectbox("Bildart wählen:", ["analog-film", "anime", "cinematic", "comic-book", "digital-art", "enhance", "fantasy-art", "isometric", "line-art", "low-poly", "modeling-compound", "neon-punk", "origami", "photographic", "pixel-art", "tile-texture"])
+    stability_size = st.selectbox("Bildauflösung wählen:", ["1024x1024", "1152x896", "1216x832", "1344x768", "1536x640", "640x1536", "768x1344", "832x1216", "896x1152"])
+    stability_cfg_scale = st.slider("Kreativität:", 1, 8, 7)
+
+    if st.button("Bild generieren"):
+           with col2:
+               with st.spinner('Bild wird generiert...'):
+                   result = create_stability_image(stability_description, stability_anti_description, stability_steps, stability_style_preset, stability_size, stability_cfg_scale)
+                   try:
+                       images = result.get("images", [])
+                       if images:
+                           for img_path in images:
+                               img = Image.open(img_path)  # Das Bild wird hier direkt gelesen.
+                               st.image(img, caption=f"Symbolbild: {stability_description}", use_column_width=True)
+                       clear_images_directory()
+                   except Exception as e:
+                        st.error("Sorry, die Content-Filterung von Stability AI hat die Bildbeschreibung abgelehnt. Vermutlich weil sie anstößig ist.")
+
+add_menu()
+
+

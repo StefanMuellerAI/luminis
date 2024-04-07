@@ -10,3 +10,4 @@ maxUploadSize = 50
 
 [client]
 toolbarMode = "minimal"
+showSidebarNavigation = false
