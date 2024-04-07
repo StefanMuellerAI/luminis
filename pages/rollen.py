@@ -21,6 +21,14 @@ openai_client = OpenAI()
 anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 mistral_client = MistralClient(api_key=MISTRAL_API_KEY)
 
+st.set_page_config(
+    page_title="Luminis - KI-Labor und Lernplattform",
+    page_icon="🥼",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+
 
 st.title('Rollen Verwaltung')
 st.subheader('Gib der KI verschiedene Rollen, um mit ihr besser zu interagieren.')

@@ -7,6 +7,14 @@ from mistralai.client import MistralClient
 from vector import list_collections, query_collection, clean_collection_name, extract_text_from_pdf, hash_file_content, add_document_to_collection
 from home import add_menu
 
+st.set_page_config(
+    page_title="Luminis - KI-Labor und Lernplattform",
+    page_icon="🥼",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+
 chroma_client = chromadb.EphemeralClient()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")

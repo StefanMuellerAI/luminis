@@ -14,7 +14,12 @@ load_dotenv()
 client_openai = OpenAI()
 stability_api_key = os.getenv("STABILITY_API_KEY")
 
-
+st.set_page_config(
+    page_title="Luminis - KI-Labor und Lernplattform",
+    page_icon="🥼",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 def create_dalle_image(description, size):
 
     try:

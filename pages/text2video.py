@@ -10,6 +10,13 @@ load_dotenv()
 
 HEYGEN_API_KEY = os.getenv('HEYGEN_API_KEY')
 
+st.set_page_config(
+    page_title="Luminis - KI-Labor und Lernplattform",
+    page_icon="🥼",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 def create_video(text):
     url = 'https://api.heygen.com/v2/video/generate'
     headers = {
@@ -84,8 +91,6 @@ with col1:
                     st.video(video_url)
                 elif status == 'failed':
                     st.error('Videoerstellung fehlgeschlagen.')
-    else:
-        st.error('Es ist ein Fehler aufgetreten!')
     st.divider()
     st.subheader('Video in diverse Sprachen übersetzen!')
     target_url = st.text_input('Ziel-URL:', 'https://www.example.com')

@@ -3,6 +3,14 @@ from tempfile import NamedTemporaryFile
 import streamlit as st
 from home import add_menu
 
+st.set_page_config(
+    page_title="Luminis - KI-Labor und Lernplattform",
+    page_icon="🥼",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+
 def transcribe_podcast_faster(file_path):
     model_size = "tiny"
     # Passen Sie die device und compute_type Parameter entsprechend Ihrer Umgebung an
@@ -38,6 +46,5 @@ if st.button('Transkription starten!'):
             st.error("Fehler beim Hochladen der Datei.")
     else:
         st.warning("Bitte lade eine MP3-Datei hoch.")
-
 
 add_menu()

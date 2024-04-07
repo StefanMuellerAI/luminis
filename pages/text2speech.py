@@ -11,8 +11,13 @@ load_dotenv()
 # Setze hier deinen OpenAI API-Key
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-if not os.path.exists("../speech"):
-    os.makedirs("../speech")
+st.set_page_config(
+    page_title="Luminis - KI-Labor und Lernplattform",
+    page_icon="🥼",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 
 def create_speech_from_text(text, voice):
     try:
@@ -24,26 +29,20 @@ def create_speech_from_text(text, voice):
             input=text
         )
         response.stream_to_file(speech_file_path)
-        return speech_file_path
+        return speech_file_path, None  # Rückgabe des Pfades und None für den Fehler
     except Exception as e:
-        # Gib bei einem Fehler den Pfad und die Fehlermeldung zurück
+        # Gib bei einem Fehler None und die Fehlermeldung zurück
         return None, str(e)
-def clear_speech_directory(directory="./speech"):
-    # Überprüfe, ob der angegebene Pfad existiert und ein Verzeichnis ist
+
+def clear_speech_directory(directory="/speech"):
     if os.path.exists(directory) and os.path.isdir(directory):
-        # Iteriere über alle Dateien im Verzeichnis
         for filename in os.listdir(directory):
             file_path = os.path.join(directory, filename)
             try:
-                # Überprüfe, ob es sich bei dem Pfad um eine Datei handelt (und nicht um ein Unterverzeichnis)
                 if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)  # Entferne die Datei
-                elif os.path.isdir(file_path):
-                    # Optional: Hier könntest du eine rekursive Löschfunktion für Unterverzeichnisse aufrufen
-                    pass
+                    os.unlink(file_path)
             except Exception as e:
                 print(f"Fehler beim Löschen der Datei {file_path}. Grund: {e}")
-
 
 st.title("Text2Speech")
 st.subheader("Konvertieren Sie Ihren Text in eine Sprachausgabe.")
@@ -54,10 +53,15 @@ with col1:
     if st.button("Sprachausgabe generieren!"):
         with col2:
             with st.spinner('Generiere Sprachausgabe...'):
-                speech_path = create_speech_from_text(user_input, voice)
-                if speech_path.is_file():
-                    st.audio(str(speech_path), format='audio/mp3')
+                speech_path, error = create_speech_from_text(user_input, voice)
+                if speech_path and speech_path.is_file():
+                    # Lösche den Inhalt des Verzeichnisses `speech` direkt nach der Erstellung der Datei
                     clear_speech_directory()
+                    st.audio(str(speech_path), format='audio/mp3')
+                elif error:
+                    st.error(f"Ein Fehler ist aufgetreten: {error}")
                 else:
-                    st.error("Ein Fehler ist aufgetreten. Die Sprachdatei konnte nicht erstellt werden.")
+                    st.error("Ein unbekannter Fehler ist aufgetreten.")
+
+# Fügen Sie Ihre Funktion zum Hinzufügen des Menüs hier ein
 add_menu()
