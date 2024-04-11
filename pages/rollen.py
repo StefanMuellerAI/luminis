@@ -38,7 +38,7 @@ with st.form("role_form", clear_on_submit=True):
                             help='Welches KI-Modell soll für diese Rolle verwendet werden?')
     name = st.text_input('Rollenname:', '', help='Wie soll die Rolle heißen?')
 
-    description = st.text_area('Beschreibung der Rolle:', '', max_chars=1000,
+    description = st.text_area('Beschreibung der Rolle:', '', max_chars=200000,
                                help='Beschreibe die Rolle. Wenn der Chatbot mit Claude-3 läuft, kann diese Beschreibung länger ausfallen.')
     submitted = st.form_submit_button('Rolle speichern')
     if submitted:

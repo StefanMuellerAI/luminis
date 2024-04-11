@@ -1,11 +1,14 @@
 import os
 from openai import OpenAI
+from dotenv import load_dotenv
 import tiktoken
 import fitz
 import chromadb
 import re
 import hashlib
 import chromadb.utils.embedding_functions as embedding_functions
+
+load_dotenv()
 
 chroma_client = chromadb.EphemeralClient()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -42,6 +45,19 @@ def extract_text_from_pdf(pdf_file):
     with fitz.open(stream=pdf_file.getvalue()) as doc:
         for page in doc:
             text += page.get_text()
+    return text
+
+def count_tokens(text):
+    """Zählt die Anzahl der Tokens in einem Text."""
+    encoding = tiktoken.encoding_for_model("gpt-4-0125-preview")
+    tokens = encoding.encode(text)
+    return len(tokens)
+
+def convert_pdf_to_string(file_bytes):
+    doc = fitz.open(stream=file_bytes, filetype="pdf")
+    text = ''
+    for page in doc:
+        text += page.get_text()
     return text
 
 

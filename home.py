@@ -7,16 +7,16 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-st.title("Willkommen bei Luminis!")
+st.title("Willkommen in Luminis! Lernplattform für KI-Pioniere")
 
 col1a, col2a = st.columns([1, 1])
 
 with col1a:
     st.subheader("Einführung zu Luminis:")
-    st.video("https://www.youtube.com/watch?v=9SfM2gduQ1c")
+    st.video("https://www.youtube.com/watch?v=nnb10J0lT9g&t=96s")
 with col2a:
     st.subheader("Aufgaben:")
-    st.write("Luminis ist ein KI-Testlabor, um öffentlichen Verwaltungen leicht Zugang zu generativer künstlicher Intelligenz zu bekommen. Es ist angebunden an alle großen KI-Modell, wie ChatGPT, Claude und Mistral. Luminis kann verwendet werden, um jeden Anwendungsfall im Bereich KI selbständig zu erforschen! Für Luminis verantwortlich ist StefanAI - Research & Development.")
+    #st.write("Luminis ist ein KI-Testlabor, um öffentlichen Verwaltungen leicht Zugang zu generativer künstlicher Intelligenz zu bekommen. Es ist angebunden an alle großen KI-Modell, wie ChatGPT, Claude und Mistral. Luminis kann verwendet werden, um jeden Anwendungsfall im Bereich KI selbständig zu erforschen! Für Luminis verantwortlich ist StefanAI - Research & Development.")
 
 st.header("Über StefanAI - Research & Development")
 col1b, col2b = st.columns([1, 4])

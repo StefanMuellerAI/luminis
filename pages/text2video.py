@@ -51,7 +51,6 @@ def create_video(text):
     }
 
     response = requests.post(url, headers=headers, data=json.dumps(data))
-    print(response.json()["error"]["message"])
     if response.status_code == 200:
         video_id = response.json()["data"]["video_id"]
         return video_id
@@ -67,12 +66,20 @@ def check_video_status(video_id):
         if response.status_code == 200:
             status = response.json().get('data', {}).get('status', '')
             if status == 'completed':
-                video_url = response.json()["data"]["video_url"]
-                return status, video_url
+                return status
             elif status == 'failed':
                 return status
 
         time.sleep(30)  # Warte für 30 Sekunden vor dem nächsten Versuch
+
+def get_video_url(video_id):
+    url = f'https://api.heygen.com/v1/video_status.get?video_id={video_id}'
+    headers = {'X-Api-Key': HEYGEN_API_KEY}
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        video_url = response.json()["data"]["video_url"]
+        return video_url
+
 
 st.title('Text2Video')
 st.subheader('Generieren Sie Videos aus Textbeschreibungen inkl. Voiceover.')
@@ -86,8 +93,9 @@ with col1:
         with col2:
             with st.spinner('Video wird erstellt... Bitte warten.'):
                 video_id = create_video(description)
-                status, video_url = check_video_status(video_id)
+                status = check_video_status(video_id)
                 if status == 'completed':
+                    video_url = get_video_url(video_id)
                     st.video(video_url)
                 elif status == 'failed':
                     st.error('Videoerstellung fehlgeschlagen.')
