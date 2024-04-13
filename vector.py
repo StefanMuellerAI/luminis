@@ -3,8 +3,11 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import tiktoken
 import fitz
+import numpy as np
 import chromadb
 import re
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer
 import hashlib
 import chromadb.utils.embedding_functions as embedding_functions
 
@@ -16,6 +19,15 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 
 openai_client = OpenAI()
+
+def clean_text(text):
+    # Konvertierung in Kleinbuchstaben
+    text = text.lower()
+    # Entfernen von Sonderzeichen, dabei bleiben Leerzeichen und Buchstaben erhalten
+    text = re.sub(r'[^a-z0-9\s§(){}\[\]<>]', '', text)
+    # Entfernen von mehrfachen Leerzeichen
+    text = ' '.join(text.split())
+    return text
 def generate_user_hash(request):
     browser = request.headers.get('User-Agent', '')
     ip = request.remote_addr
@@ -61,6 +73,29 @@ def convert_pdf_to_string(file_bytes):
     return text
 
 
+def rerank_results(results, query):
+    """
+    Rerankt die Ergebnisse basierend auf zusätzlichen Relevanzmetriken.
+    """
+    query_embedding = create_embedding(query)
+
+    # Berechne die Ähnlichkeit jedes Ergebnisses mit der Abfrage
+    ranked_results = sorted(
+        results,
+        key=lambda x: cosine_similarity(query_embedding, x['embedding']),
+        reverse=True  # Höhere Ähnlichkeit bedeutet höhere Relevanz
+    )
+    return ranked_results
+
+
+def cosine_similarity(vec1, vec2):
+    """Berechnet die Kosinusähnlichkeit zwischen zwei Vektoren."""
+    dot_product = np.dot(vec1, vec2)
+    norm_a = np.linalg.norm(vec1)
+    norm_b = np.linalg.norm(vec2)
+    return dot_product / (norm_a * norm_b)
+
+
 def tokenize_and_chunk_text(text, max_tokens_per_chunk):
     """
     Zerlegt den Text in Chunks, basierend auf der maximalen Anzahl von Tokens pro Chunk.
@@ -86,11 +121,12 @@ def add_document_to_collection(collection ,text, doc_id, hash_value, max_tokens_
 
     # Für jeden Chunk fügen wir ihn zur Collection hinzu.
     for i, chunk in enumerate(text_chunks):
-        embedding = create_embedding(chunk)
+        clean_chunk = clean_text(chunk)
+        embedding = create_embedding(clean_chunk)
         chunk_id = f"{doc_id}_{i}"  # Erzeuge eine eindeutige ID für jeden Chunk basierend auf der doc_id und der Reihenfolge.
         collection.upsert(
             embeddings=[embedding],
-            documents=[chunk],
+            documents=[clean_chunk],
             metadatas=[{"source": "user_uploaded_pdf", "hash": hash_value, "describtion": collection_description, "chunk_id": chunk_id}],
             ids=[chunk_id]
         )

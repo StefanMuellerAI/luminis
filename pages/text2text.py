@@ -67,14 +67,17 @@ def process_user_input(prompt):
 
     with st.chat_message("assistant"):
         results = query_collection(prompt, st.session_state.collection_to_talk)
+
         context = "\n".join(results["documents"][0])
+        clean_context = context.strip()
+        print(clean_context)
 
         if st.session_state["ai_model"] == openai_model:
             st.session_state.messages.append({"role": "system", "content": st.session_state.primer})
             stream = openai_client.chat.completions.create(
                 model=openai_model,
                 messages=[
-                    {"role": m["role"], "content": m["content"] + context}
+                    {"role": m["role"], "content": m["content"] + "Greife zur Beantwortung der Frage auf die folgenden Informationen zurück" + clean_context}
                     for m in st.session_state.messages
                 ],
                 stream=True,

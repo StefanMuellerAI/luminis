@@ -37,13 +37,14 @@ if st.button("Zur Sammlung hinzufügen oder hinzufügen!"):
 
     if uploaded_files and collection_name:
         for doc_id, uploaded_file in enumerate(uploaded_files, start=1):
-            text = extract_text_from_pdf(uploaded_file)
-            if text:
-                hash_value = hash_file_content(text)
-                add_document_to_collection(collection, text, doc_id, hash_value, chunk_size, collection_describtion)
-                st.success(f"Dokument {doc_id} erfolgreich zur Sammlung hinzugefügt oder ergänzt.")
-            else:
-                st.error(f"Die PDF-Datei {doc_id} scheint keinen Text zu enthalten.")
+            with st.spinner(f"Verarbeite Dokument {doc_id}..."):
+                text = extract_text_from_pdf(uploaded_file)
+                if text:
+                    hash_value = hash_file_content(text)
+                    add_document_to_collection(collection, text, doc_id, hash_value, chunk_size, collection_describtion)
+                    st.success(f"Dokument {doc_id} erfolgreich zur Sammlung hinzugefügt oder ergänzt.")
+                else:
+                    st.error(f"Die PDF-Datei {doc_id} scheint keinen Text zu enthalten.")
     else:
         st.error(
             "Bitte geben Sie einen Namen für die Sammlung vergeben und laden Sie mindestens eine PDF-Datei hoch.")

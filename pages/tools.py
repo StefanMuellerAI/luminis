@@ -110,6 +110,28 @@ def generiere_dateiname_pdf_bereich(datei_name, start_seite, ende_seite):
     """
     return f"{datei_name}_Seiten_{start_seite}_bis_{ende_seite}.pdf"
 
+def merge_pdfs(uploaded_files):
+    """
+    Führt alle hochgeladenen PDF-Dateien zu einem PDF zusammen.
+    :param uploaded_files: Liste der hochgeladenen PDF-Dateien.
+    :return: BytesIO-Objekt des zusammengeführten PDFs.
+    """
+    merged_pdf = fitz.open()
+
+    for uploaded_file in uploaded_files:
+        pdf_bytes = uploaded_file.read()
+        pdf_doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+        merged_pdf.insert_pdf(pdf_doc)
+        pdf_doc.close()
+
+    merged_pdf_bytes = io.BytesIO()
+    merged_pdf.save(merged_pdf_bytes)
+    merged_pdf.close()
+
+    merged_pdf_bytes.seek(0)
+    return merged_pdf_bytes
+
 # Streamlit App
 def main():
     st.subheader("PDF2Text-Extraktor")
@@ -183,6 +205,32 @@ def main():
                     )
         except Exception as e:
             st.error(f"Fehler beim Verarbeiten der PDF-Datei: {str(e)}")
+
+    st.subheader("PDF-Merger")
+
+    uploaded_files = st.file_uploader(
+        "Wählen Sie die PDF-Dateien aus, die zusammengeführt werden sollen",
+        type=["pdf"],
+        accept_multiple_files=True
+    )
+
+    if uploaded_files:
+        if st.button("PDFs zusammenführen"):
+            merged_pdf_bytes = merge_pdfs(uploaded_files)
+
+            st.success("Die PDFs wurden erfolgreich zusammengeführt!")
+
+            st.download_button(
+                label="Zusammengeführtes PDF herunterladen",
+                data=merged_pdf_bytes,
+                file_name="merged_pdf.pdf",
+                mime="application/pdf"
+            )
+        else:
+            st.info("Klicken Sie auf 'PDFs zusammenführen', um die Dateien zusammenzuführen.")
+    else:
+        st.warning("Bitte laden Sie mindestens zwei PDF-Dateien hoch, um sie zusammenzuführen.")
+
 
 if __name__ == "__main__":
     main()
