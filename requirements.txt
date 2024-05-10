@@ -222,3 +222,6 @@ WSME==0.12.1
 yappi==1.6.0
 yaql==3.0.0
 zipp==3.18.1
+
+fpdf~=1.7.2
+scikit-learn~=1.4.2

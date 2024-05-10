@@ -1,16 +1,14 @@
 [theme]
 primaryColor="#F63366"
-backgroundColor="#FFFFFF"
+backgroundColor="#ffffff"
 secondaryBackgroundColor="#F0F2F6"
 textColor="#262730"
 font="sans serif"
 
 [server]
 maxUploadSize = 50
-anthropic_model = "claude-3-opus-20240229"
-openai_model = "gpt-4-0125-preview"
-mistral_model = "mistral-large-latest"
 
 [client]
 toolbarMode = "minimal"
 showSidebarNavigation = false
+
